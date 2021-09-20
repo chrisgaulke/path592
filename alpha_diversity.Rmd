@@ -1,13 +1,27 @@
-#Alpha Diversity
+---
+title: "Alpha Diversity Basics"
+output:
+  pdf_document: default
+  html_notebook: default
+---
 
-# "The vegan package provides tools for descriptive community ecology.
-# It has most basic functions of diversity analysis, community ordination
-# and dissimilarity analysis. Most of its multivariate tools can be
-# used for other data types as well." Taken from the vegan help page
+## Introduction
 
+Now that we have some data to work with the we can get to work. In this exercise we will learn how to quantify alpha diversity (species diversity) of microbial community data.In all the diversity analysis scripts we will extensively use the vegan package. 
+>The vegan package provides tools for descriptive community ecology. It has most basic functions of diversity analysis, community ordination and dissimilarity analysis. Most of its multivariate tools can be used for other data types as well (Taken from the vegan help page).
+  
+
+*** 
+## Analysis
+
+### Initialize project and generate some random data
+
+To start we will import the libraries needed and use random distribution generators to make a neg binomial distributed matrix this will be a reasonable-ish approximation of microbiome data. For simplicity, a small handmade data set will also be used. 
+
+```{r data_import}
 library(vegan)
 
-#Make some faux data
+#Make small data set
 
 df <- data.frame(patient_1 = c(5,5,5,5,5,5),
                  patient_2 = c(0,0,0,0,0,1000),
@@ -23,8 +37,8 @@ rownames(df) <- c("species_a",
                   "species_f")
 
 
-#use random distribution generators to make a neg binomial distributed matrix
-#this will be a reasonable-ish approximation of microbiome data
+# Use random distribution generators to make a neg binomial distributed 
+# matrix this will be a reasonable-ish approximation of microbiome data
 
 set.seed(731)
 big_df <- matrix(rnbinom(10000, size = .2, prob = .01),
@@ -34,12 +48,20 @@ big_df <- matrix(rnbinom(10000, size = .2, prob = .01),
 colnames(big_df) <- paste("patient", 1:100,sep = "_" )
 rownames(big_df) <- paste("species", 1:100,sep = "_" )
 
+```
 
-# Rarefy ------------------------------------------------------------------
+***
+
+### Normalization
+
+Because varying sequencing depth and unequal input concentration is unavoidable in microbiome science, normalization needs to be applied to account for this. Two common methods are rarefaction where a data set is randomly resampled to a common sequencing depth, and relative abundance where a proportional microbial abundances are calculated for each sample independently.  
+
+```{r normalization}
+
 
 #Rarefaction is necessary to conduct alpha diversity analysis
 rarecurve(x = df,
-          step = 10,
+          step = 10, # step is how often you sample
           )
 
 #set sample size
@@ -84,18 +106,24 @@ big_df.rel <- t(big_df.rel)
 cor.test(matrix(big_df.rare),matrix(big_df.rel))
 cor.test(vegdist(big_df.rare),vegdist(big_df.rel))
 
-
 #df will not be rarefied
 
-# Richness ----------------------------------------------------------------
+```
 
+***
+
+### Estimate Richness 
+
+Species richness is a simple alpha diversity metric that quantifies the total number of species, OTUs, ASV, phylotypes, etc. within a given sample. It is (usually) strongly influenced by normalization method with raw, and relative abundance data having increased richness.
+
+```{r richness}
 # The function in R::vegan to determine richness is specnumber
 
 specnumber(x = df,
           MARGIN = 2 #by columns
-            )
+          )
 
-#unrarefied
+#raw
 big_df.richness <- specnumber(x = big_df,
                     MARGIN = 2 #by columns
                     )
@@ -105,14 +133,21 @@ big_df_rare.richness <- specnumber(x = big_df.rare,
                     MARGIN = 1 #by columns
                     )
 
+#how are the values distributed for normalized and raw data
 boxplot(big_df.richness, big_df_rare.richness,
         names = c("raw", "rarefied"))
-
 hist(big_df.richness)
 hist(big_df_rare.richness) #rarefied data frame
+```
 
+***
 
-# Shannon -----------------------------------------------------------------
+### Shannon Diversity
+
+Shannon diversity is a measure of how "random" a community is. As number of species and evenness increases so does Shannon diversity.  
+
+```{r shannon_diversity }
+
 
 diversity(df,
           index = "shannon",
@@ -129,15 +164,19 @@ big_df_rare.shannon <- diversity(big_df.rare,
                             MARGIN = 1
 )
 
+#how are the values distributed for normalized and raw data
+
 boxplot(big_df.shannon, big_df_rare.shannon,
         names = c("raw", "rarefied"))
-
 hist(big_df.shannon)
 hist(big_df_rare.shannon)
+```
 
+***
+### Simpson Diversity Index
+The Simpson index is another popular alpha-diversity metric. It is accessible through the diversity function. 
 
-
-# Shannon -----------------------------------------------------------------
+```{r simpson_diversity}
 
 diversity(df,
           index = "simpson",
@@ -154,12 +193,19 @@ big_df_rare.simpson <- diversity(big_df.rare,
                                  MARGIN = 1
 )
 
+#how are the values distributed for normalized and raw data
 boxplot(big_df.simpson, big_df_rare.simpson,
         names = c("raw", "rarefied"))
 hist(big_df.simpson)
 hist(big_df_rare.simpson)
+```
 
-# Richness Correlations ---------------------------------------------------
+*** 
+#### Relative abundance correlations 
+
+Different metrics yield different results with varying degrees of correlation which depend on the underlying data structure.  
+
+```{r correlations}
 
 #Linear relationships cannot be assumed so we will use nonparametic
 
@@ -176,8 +222,7 @@ cor.test(big_df_rare.richness, big_df_rare.shannon, method = "spearman")
 
 plot(big_df_rare.simpson, big_df_rare.shannon)
 cor.test(big_df_rare.simpson, big_df_rare.shannon, method = "spearman")
-
-
+```
 
 
 

@@ -87,7 +87,7 @@ plot(big_df_rare.bray, big_df_rare.jacc,xlim = c(0,1), ylim=c(0,1))
 # Principle Components Analysis -------------------------------------------
 
 
-big_df.prcomp <- prcomp(big_df.rare)
+big_df.prcomp <- prcomp(big_df.rare, center = T, scale =T)
 
 #to determine how much variance is explained lets look at the summary
 summary(big_df.prcomp)
