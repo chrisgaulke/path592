@@ -1,9 +1,9 @@
 ---
 title: "First R project"
 output:
+  pdf_document: default
   html_document:
     df_print: paged
-  pdf_document: default
 ---
 
 ### Initialize Project
@@ -361,13 +361,13 @@ It should be noted that all of the approaches outlined for data frames will work
 
 ***
 
-###Importing Data###
+### Importing Data
 
 One of the fundamental skills in R is being able to get your data into R. This can be trickier than it sounds. First a simple example. 
 
 ```{r,error=TRUE}
 #read in tab separated data file
-my_data <- read.table(file = "/Users/cgaulke/Documents/research/R_training/data/test_df1.txt"
+my_data <- read.table(file = "/Users/cgaulke/Documents/research/path592/lab_1_R_basics/data/test_df1.txt"
                       )
 
 #print the data frame
@@ -375,7 +375,7 @@ my_data
 
 #But it is better to specify the field separator explicitly
 
-my_data <- read.table(file = "/Users/cgaulke/Documents/research/R_training/data/test_df1.txt",
+my_data <- read.table(file = "/Users/cgaulke/Documents/research/path592/lab_1_R_basics/data/test_df1.txt",
                       sep = "\t" #\t is a special character that codes for 
                       )
 
@@ -387,7 +387,7 @@ But something looks off
 
 ```{r}
 #tell R we have a header
-my_data <- read.table(file = "/Users/cgaulke/Documents/research/R_training/data/test_df1.txt",
+my_data <- read.table(file = "/Users/cgaulke/Documents/research/path592/lab_1_R_basics/data/test_df1.txt",
                       sep = "\t",
                       header = T)
 
@@ -399,7 +399,7 @@ Let's see what can go wrong
 
 ```{r}
 #Look what happens if we give the 
-my_data <- read.table(file = "/Users/cgaulke/Documents/research/R_training/data/test_df2.txt",
+my_data <- read.table(file = "/Users/cgaulke/Documents/research/path592/lab_1_R_basics/data/test_df2.txt",
                       sep = "\t",
                       header = T)
 
@@ -412,7 +412,7 @@ Well that didn't work... Oh we have a "#" in there that can cause problems
 
 ```{r}
 #if we have # in our data 
-my_data <- read.table(file = "/Users/cgaulke/Documents/research/R_training/data/test_df2.txt",
+my_data <- read.table(file = "/Users/cgaulke/Documents/research/path592/lab_1_R_basics/data/test_df2.txt",
                       sep = "\t",
                       header = T,
                       comment.char = "")
@@ -424,7 +424,7 @@ RAGE, RAGE, RAGE!!!
 
 ```{r}
 #Looks like we also have a stray " ' "
-my_data <- read.table(file = "/Users/cgaulke/Documents/research/R_training/data/test_df2.txt",
+my_data <- read.table(file = "/Users/cgaulke/Documents/research/path592/lab_1_R_basics/data/test_df2.txt",
                       sep = "\t",
                       header = T,
                       quote = "",#sets the quote character, "'" by default, to empty set
@@ -439,7 +439,7 @@ my_data
 Finally! So knowing what you have in your file really matters. This sort of poor encoding of data is common. For example "#" and " ' " are common in many common data file types (e.g., gff3 files). There are a ton of options for the read.table() function that can help you get messy data into R (if you really want to). In fact lets check out those options next 
 
 *** 
-###Packages###
+### Packages
 
 While R has a lot of excellent functions that are loaded at start up sometimes you need something specific to a task. For that, R is one of the only sequencing languages that offers an easy and intuitive package handling interface. 
 
@@ -456,7 +456,7 @@ You can browse R packages at cran (https://cran.r-project.org)
 
 ***
 
-###Data and (Simple) Plotting### 
+### Data and (Simple) Plotting
 
 R might not be the fastest programming language, but where it fails at speed it excels at rapid data visualization.  
 
@@ -499,11 +499,24 @@ abline(lm(mtcars$mpg ~ mtcars$hp))
 
 ```
 
+And now we can clean up... 
+
+```{r}
+
+plot(mtcars$mpg ~ mtcars$hp, 
+     pch = 16, 
+     col = "steelblue", 
+     ylab = "MPG", xlab = "HP"
+     ) 
+abline(lm(mtcars$mpg ~ mtcars$hp))
+
+```
+
 Later we will learn how to make plots look even better using R packages.
 
 ***
 
-###Getting Help###
+### Getting Help
 
 The easiest way to get help is just to ask for it. 
 
