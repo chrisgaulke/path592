@@ -1,0 +1,518 @@
+---
+title: "First R project"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+### Initialize Project
+
+1. To begin open RStudio
+2. Click **File** -> **New project**
+3. Choose **New directory**
+4. Choose **New project**
+    a.  **Make sure to check start new session box in the bottom right corner** 
+5. Choose a location for your project
+
+
+#### **IMPORTANT** 
+>In deciding where you are going to put this project you should keep in mind a couple things. First, you should have a central location for all your code. This is not just a good organizational idea, but it will help you and others quickly find what is needed. It is also a a requirement of this lab/class. Think of it as a digital lab notebook.For example, all of my lab code is located here: /Users/cgaulke/Documents/research/. Each of my projects gets a new subdirectory, for this exercise it is: /Users/cgaulke/Documents/research/R_training.  
+
+
+6. After you have selected a location select **create project**
+    a. If everything has gone right you should end up with a new RStudio window with three tabs (Console, environment, and project). 
+7. Now select **File** --> **New File** --> **R Script**
+    a. This is a code document, which is basically a glorified text document with syntax highlighting. This is where you will right and save your code.
+
+> Note: Code executed in the console is not saved, so you do need a R Script 
+
+8. Now lets go over some basics...
+
+*** 
+### Comments ###
+
+In your R Script everything is code, which can be bad if you need to explain what you are doing. 
+
+```{r,error=TRUE}
+This assigns 2 to x 
+x <- 2 
+```
+
+This creates a error, which is bad in R because it usually stops whatever code you are running without returning the value you asked for. If we what to explain ourselves we can use a comment
+
+```{r,error=TRUE}
+#This assigns 2 to x 
+x <- 2 
+x
+```
+
+The comment character "#" allows us to tell the interpreter (computer) to ignore that bit of code. Not all code needs to be commented, but as a general rule if you cant glance at it and figure out whats going on you should use a comment
+
+***
+### R Data types ###
+There are many types of R-objects. We will use the following frequently
+
+* Vectors
+* Lists
+* Matrices
+* Data Frames
+* Arrays
+* Factors
+
+Each data type has various strengths and purposes. 
+
+### Vectors 
+
+The simplest of these objects is the vector object. When these objects are made from the basic (atomic) data types (logical, integer, real, complex, string and raw) they are termed atomic vectors. Below we will take a closer look at these data types
+
+
+```{r,error=TRUE}
+#Logical aka Boolean, TRUE/FALSE  
+v <- TRUE 
+print(class(v))
+
+#Numeric ... Just what it sounds like
+v <- 23.5
+print(class(v))
+
+#Integer Note that R integers are 32 bit... and that sucks
+v <- 2L
+print(class(v))
+
+#Complex imaginary 
+v <- 2+5i
+print(class(v))
+
+#Character
+v <- "TRUE"
+print(class(v))
+
+#Raw (don't worry about this one yet)
+v <- charToRaw("Hello")
+print(class(v))
+```
+
+These basic (atomic) data types can be combined into larger data types such as data frames, matrices, etc. If the length is a vector is more than one we create it with the special c() function. 
+
+```{r,error=TRUE}
+#Logical aka Boolean, TRUE/FALSE  
+v <- c(1,2,3)
+print(class(v))
+length(v)
+
+```
+
+Vectors, can be any length, but only one type. If there is more than one type then the vector is coerced to a single type as above. 
+
+```{r,error=TRUE}
+#make a mixed vector with character
+v <- c(1,2,"3")
+print(class(v))
+v
+
+#make a mixed vector with decimal 
+v <- c(1,2.1,3)
+print(class(v))
+v
+
+#make a mixed vector with integer 
+v <- c(1,2.1,3L)
+print(class(v))
+v
+```
+
+### Lists
+
+If you need to store different types and sizes of data together you can uses lists
+
+```{r,error=TRUE}
+# Create a list.
+list1 <- list(c(1,2,3),"chris",sin)
+
+# Print the list.
+print(list1)
+class(list1)
+```
+
+### Matrices
+
+A matrix is a two-dimensional rectangular data set. It can be created using a vector input to the matrix function.
+ 
+```{r,error=TRUE}
+# Create a matrix.
+M = matrix( c('a','a','b','c','b','a'), nrow = 2, ncol = 3, byrow = TRUE)
+print(M)
+```
+
+### Arrays
+
+While matrices are confined to two dimensions, arrays can be of any number of dimensions. The array function takes a dim attribute which creates the required number of dimension. In the below example we create an array with two elements which are 3x3 matrices each.
+
+```{r,error=TRUE}
+# Create an array.
+a <- array(c('boston','terriers'),dim = c(3,3,2))
+print(a)
+```
+
+### Factors
+
+Factors are vectors of values and labels. They are very useful for coding data for plotting or statistical analysis, the labels are always character irrespective of its original data type. 
+
+Factors are created using the factor() function. The nlevels functions gives the count of levels.
+
+```{r,error=TRUE}
+# Create a vector.
+eye_colors <- c('green','green','brown','blue','hazel','blue','green')
+
+# Create a factor object.
+factor_ec <- factor(eye_colors)
+
+# Print the factor.
+print(factor_ec)
+print(nlevels(factor_ec))
+```
+
+### Data Frames
+
+Data frames are data objects in which each column can contain different types of data. Essentially it is list of vectors of equal length.
+
+Data Frames are created using the data.frame() function.
+
+```{r,error=TRUE}
+# Make data frame.
+BMI <- 	data.frame(
+   gender = c("Male", "Female","Female"), 
+   height = c(152, 150, 165), 
+   weight = c(81,70, 78),
+   Age = c(33,22,57)
+)
+print(BMI)
+```
+
+***
+
+Data frames are really important in data analysis so it is worth spending a little extra time exploring their features. We will start with how to view data frames
+
+```{r, error=T}
+#make a larger data frame
+
+df <- 	data.frame(
+   letter1 = letters[1:20], 
+   letter2 = LETTERS[1:20],
+   num1 = 1:20, 
+   num2 = 21:40,
+   num3 = 41:60
+)
+
+#View in a new window
+View(df)
+
+#for very large data frames it can sometimes be useful to look at a few entries 
+#and not the whole thing to do this we can  
+
+#get the first 10 rows
+head(df, 10)
+
+#get the last 10 rows
+tail(df, 10)
+
+#you can change the number 10 to any number you like even if it is larger than 
+#the number of rows
+
+
+
+```
+
+***
+
+Its also nice to be able to get some general information about data tables because they are often large
+
+```{r,error=TRUE}
+# Make data frame.
+BMI <- 	data.frame(
+   gender = c("Male", "Female","Female"), 
+   height = c(152, 150, 165), 
+   weight = c(81,70, 78),
+   Age = c(33,22,57)
+)
+
+#get class 
+class(BMI)
+
+#Print column names
+colnames(BMI)
+#Print row names
+rownames(BMI)
+
+#row and column names are stored invisibly as data object attributes. When we use
+#the functions to return the row or colnames we are actually accessing these data.
+#To get all the names at once we can use
+attributes(BMI)
+
+#How many rows and columns? 
+dim(BMI)  #gives the number of rows and columns
+nrow(BMI) #gives only rows
+ncol(BMI) #gives only columns
+
+#note length does not work as expected here
+length(BMI)
+
+```
+
+***
+
+There are many ways to access the data inside a data frame and, as usual, they all have their strengths and limitations. The most versatile is the subset function '['. Using this notation a data frame, df, is split by indices you provide i.e., df[row_index, column_index]. You must include both indices even if you are only interested in a column or row. Examples are provided below
+
+```{r,error=TRUE}
+# Make data frame.
+BMI <- 	data.frame(
+   gender = c("Male", "Female","Female"), 
+   height = c(152, 150, 165), 
+   weight = c(81,70, 78),
+   Age = c(33,22,57)
+)
+
+BMI
+
+#get the first entry in row 1 column 1
+BMI[1,1]
+
+#alternatively call by row and column names
+BMI[1,"gender"]
+
+#what if we want to get all data in a column? 
+#to get all data in column 4 (Age)
+BMI[,4]
+
+#you can also use the quoted column name to get the same info 
+BMI[,"Age"]
+
+# as a bonus in data frames we can also use the '$' operator to get column data
+BMI$Age 
+
+#to access all data in a row
+BMI[1,]
+
+#just to confirm that data frames can contain multiple data types
+class(BMI$gender)
+class(BMI$weight)
+
+```
+
+***
+
+These techniques can be useful if you need to add to or change data in a data frame 
+```{r,error=TRUE}
+# Make data frame.
+BMI <- 	data.frame(
+   gender = c("Male", "Female","Female"), 
+   height = c(152, 150, 165), 
+   weight = c(81,70, 78),
+   Age = c(33,22,57)
+)
+
+BMI
+
+#We mistakenly coded patient 2 as a female and need to change it. To do this we 
+#can use the 'gets' (aka, assign) operator '<-' 
+
+BMI[2,1] <- "Male"
+BMI
+
+#we can also add whole columns or rows if we want. Lets say we enrolled a new patient in our study
+
+BMI[4,] <- list("Female",140, 72,68 ) #not we use a list ... Why ? 
+
+#Now we also forgot that we collected information on smoking status. We can add
+#this too
+BMI[,5] <- c(0,1,0,1)
+
+#But the column names are now odd
+colnames(BMI)
+
+#we can fix this too using the colnames function and the assignment operator
+colnames(BMI) <- c("gender", "height", "weight", "Age", "smoker")
+
+#but why is age the only thing capitalized, thats weird, but we can fix it
+class(colnames(BMI))
+
+#looks like colnames are just a character vector and just like data frames these 
+# can be subset using '[' . The only difference is there is only one dimension
+colnames(BMI)[4] <- "age"
+
+#We can do the same thing with row names, say we wanted to add patient IDs to the 
+#data 
+
+rownames(BMI) <- c("Patient1","Patient2","Patient3","Patient4")
+
+BMI
+
+#now to get the gender of Patient1 we can use 
+
+BMI["Patient1", "gender"]
+
+```
+
+***
+
+It should be noted that all of the approaches outlined for data frames will work with matrices except for the '$' operator. But, it should be noted that matrices can only contain 1 data type unlike data frames which can encode columns with different data types
+
+
+***
+
+###Importing Data###
+
+One of the fundamental skills in R is being able to get your data into R. This can be trickier than it sounds. First a simple example. 
+
+```{r,error=TRUE}
+#read in tab separated data file
+my_data <- read.table(file = "/Users/cgaulke/Documents/research/R_training/data/test_df1.txt"
+                      )
+
+#print the data frame
+my_data
+
+#But it is better to specify the field separator explicitly
+
+my_data <- read.table(file = "/Users/cgaulke/Documents/research/R_training/data/test_df1.txt",
+                      sep = "\t" #\t is a special character that codes for 
+                      )
+
+my_data
+
+```
+
+But something looks off 
+
+```{r}
+#tell R we have a header
+my_data <- read.table(file = "/Users/cgaulke/Documents/research/R_training/data/test_df1.txt",
+                      sep = "\t",
+                      header = T)
+
+#print the data frame
+my_data
+
+```
+Let's see what can go wrong
+
+```{r}
+#Look what happens if we give the 
+my_data <- read.table(file = "/Users/cgaulke/Documents/research/R_training/data/test_df2.txt",
+                      sep = "\t",
+                      header = T)
+
+#print the data frame
+my_data
+
+```
+
+Well that didn't work... Oh we have a "#" in there that can cause problems
+
+```{r}
+#if we have # in our data 
+my_data <- read.table(file = "/Users/cgaulke/Documents/research/R_training/data/test_df2.txt",
+                      sep = "\t",
+                      header = T,
+                      comment.char = "")
+
+#print the data frame
+my_data
+```
+RAGE, RAGE, RAGE!!!
+
+```{r}
+#Looks like we also have a stray " ' "
+my_data <- read.table(file = "/Users/cgaulke/Documents/research/R_training/data/test_df2.txt",
+                      sep = "\t",
+                      header = T,
+                      quote = "",#sets the quote character, "'" by default, to empty set
+                      comment.char = ""#sets the comment character, "#" by default, to empty set
+                      )
+
+#print the data frame
+my_data
+
+```
+
+Finally! So knowing what you have in your file really matters. This sort of poor encoding of data is common. For example "#" and " ' " are common in many common data file types (e.g., gff3 files). There are a ton of options for the read.table() function that can help you get messy data into R (if you really want to). In fact lets check out those options next 
+
+*** 
+###Packages###
+
+While R has a lot of excellent functions that are loaded at start up sometimes you need something specific to a task. For that, R is one of the only sequencing languages that offers an easy and intuitive package handling interface. 
+
+```{r}
+#To install a new package 
+#install.packages("vegan") #uncomment to install
+
+#To load a package 
+library(vegan)
+
+```
+
+You can browse R packages at cran (https://cran.r-project.org)
+
+***
+
+###Data and (Simple) Plotting### 
+
+R might not be the fastest programming language, but where it fails at speed it excels at rapid data visualization.  
+
+R also initializes with several data sets that can be used for demonstration. Here we will use the mtcars data set 
+
+```{r}
+
+mtcars
+
+#Simple box plot of the distribution of mpg by cylinders
+# The $ lets us access an entire column of a data frame
+# The ~ symbol establishes the response and predictors
+boxplot(mtcars$mpg ~ mtcars$cyl) 
+
+```
+
+We can plot simple xy scatters to show potential relationships
+
+```{r}
+
+plot(mtcars$mpg ~ mtcars$hp) 
+
+```
+
+Let's say your boss wants you to add a regression line. That's easy... 
+
+```{r}
+
+plot(mtcars$mpg ~ mtcars$hp) 
+abline(lm(mtcars$mpg ~ mtcars$hp)) #lm is linear regression
+
+```
+
+And now we can make it slightly less uggo 
+
+```{r}
+
+plot(mtcars$mpg ~ mtcars$hp, pch = 16, col= "steelblue") 
+abline(lm(mtcars$mpg ~ mtcars$hp))
+
+```
+
+Later we will learn how to make plots look even better using R packages.
+
+***
+
+###Getting Help###
+
+The easiest way to get help is just to ask for it. 
+
+```{r}
+help(read.table)
+#or 
+??read.table
+```
+
+In RStudio you can also search for help documentation in the "Files, Plots, Packages, ..." task panel. The search field is indicated by the 
+
+

@@ -5,3 +5,5 @@
 .pdf
 figures/
 notebooks/
+.DS_Store
+archive/
