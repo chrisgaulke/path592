@@ -1,9 +1,11 @@
 .Rproj.user
-.Rhistory
-.RData
+.Rhistory*
+.RData*
 .Ruserdata
 .pdf
 figures/
 notebooks/
 .DS_Store
 archive/
+.gitignore
+path592.Rproj
