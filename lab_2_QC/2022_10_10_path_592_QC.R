@@ -79,7 +79,7 @@ options(stringsAsFactors = F)
 path <- "/Users/cgaulke/unsynced_projects/raw_data/2022_10_10_path592_raw/"
 filt.path <- "/Users/cgaulke/Documents/research/path592/lab_2_QC/filtered_data/" #filtered file directory make sure to update
 
-#git ignore to ignore this
+#Make sure everything is looking OK
 list.files(path)
 
 fnFs <- sort(list.files(path, pattern="_R1_001.fastq.gz", full.names = TRUE))
