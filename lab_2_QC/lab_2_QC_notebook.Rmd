@@ -1,0 +1,184 @@
+---
+title: "LAB 2 QC Notebook"
+output: html_notebook
+---
+
+### Package installation
+
+If you haven't already, install the required software. The commands in this section are run only once and should be commented after you have finished running them
+
+```{r, eval=FALSE}
+# Installing Bioconductor
+
+if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+BiocManager::install()
+
+# Installing dada2
+BiocManager::install("dada2")
+
+# Installing other packages needed
+install.packages("ggplot2")
+install.packages("vegan")
+```
+
+------------------------------------------------------------------------
+
+### Unpacking and sorting files
+
+The following commands can be run in a terminal window (Mac) or in Rstudio console window. The tar archive should be unpacked in a suitable location (i.e., not the desktop). Preferably you have a robust file naming system for your research. For example, my research analysis are all kept in ~/Documents/research/<name_of_analysis_project>. Each project has the following subdirectories: data/, analysis, scripts/. Scripts contains the R project. Other directories can be added as needed (e.g., manuscript, reports, ppt, etc.). This compartmentalizes the projects and helps keep things organized.
+
+#### Decompress the and untar the archive (Mac)
+
+First navigate to where you are storing your data. The decompress it. On Windows you will probably need 7zip or WinZip to decompress and unpack.
+
+```{bash, eval = FALSE}
+
+cd <path_to_data>
+tar -xvf path_592_files_biogeo.tar.gz
+
+```
+
+------------------------------------------------------------------------
+
+### Set the environment
+
+#### Load required libraries
+
+```{r}
+
+library(dada2)
+library(ggplot2)
+options(stringsAsFactors = F)
+
+```
+
+------------------------------------------------------------------------
+
+### Import data
+
+```{r}
+path <- "/Users/cgaulke/unsynced_projects/raw_data/2022_10_10_path592_raw/"
+
+filt.path <- "/Users/cgaulke/Documents/research/path592/lab_2_QC/filtered_data/" #filtered file directory make sure to update
+```
+
+Make sure everything is looking OK
+```{r}
+head(list.files(path))
+```
+
+Now make sure that that we are only going to be working with fastq files
+
+```{r}
+fnFs <- sort(list.files(path, pattern="_R1_001.fastq.gz", full.names = TRUE))
+fnRs <- sort(list.files(path, pattern="_R2_001.fastq.gz", full.names = TRUE))
+```
+
+***
+
+### Quality Control
+
+First we will make sure nothing has gone wrong by checking that the number of forward and reverse read files are the same. 
+
+```{r}
+length(fnFs) == length(fnRs)
+
+```
+
+We might also want to make some new, easier to work with, sample names for later
+
+```{r}
+sample.names <- sapply(strsplit(basename(fnFs), "_R1"), `[`, 1)
+```
+
+#### Plotting quality scores using dada2
+
+```{r}
+plotQualityProfile(fnFs[1])
+plotQualityProfile(fnRs[1])
+
+```
+
+Warnings are generally OK, but should be read, errors on the otherhand usually need to be addressed. 
+
+Now we can plot all the read quality scores aggregated together (this might take a minute)
+
+```{r}
+fnFs_qual.plot <- plotQualityProfile(fnFs,aggregate = T)
+fnRs_qual.plot <- plotQualityProfile(fnRs,aggregate = T)
+
+```
+
+While this is easier to look at than one plot at a time, it is still hard to see where the cutoffs should be. Since this is just wrapping ggplot2 code (see raw script), we can extend their code a bit
+
+```{r}
+fnFs_qual.plot + geom_hline(yintercept= 25) + geom_vline(xintercept = 250)
+
+fnRs_qual.plot + geom_hline(yintercept= 25) + geom_vline(xintercept = 200)
+
+```
+
+OK, so the reverse reads look a little worse than the forwards but the trimming thresholds (lines) wond eliminate overlap of the reads so we are OK. 
+
+#### Filtering reads
+
+Next we want to set up names and locations for our filtered files that we will create later
+
+```{r}
+filtFs <- file.path(filt.path, "filtered",
+                    paste0(sample.names, "_F_filt.fastq.gz"))
+
+filtRs <- file.path(filt.path, "filtered",
+                    paste0(sample.names, "_R_filt.fastq.gz"))
+```
+
+Next we will name them
+
+```{r}
+names(filtFs) <- sample.names
+names(filtRs) <- sample.names
+```
+
+Looking at the data we see a rapid drop in quality around 250bp R1 (200 R2). Since the average drops below ~30 (99.9% accuracy) around 250 and approachs Q25 at 200 we will truncate at 200 for the reverse. The forward looks better (this is usual) so we will truncate around 250. We will also take off about 10 bases on the left as these bases are highly skewed (see multiqc).
+
+```{r}
+filter.out <- filterAndTrim(fnFs, #paths to the input forward reads
+                            filtFs, #paths to the output filtered forward reads
+                            fnRs, #paths to the input reverse reads
+                            filtRs, #paths to the output filtered reverse reads
+                            truncLen=c(250,200), #R1 and R2 truncation lengths
+                            maxN=0, #max allowable N's (ambiguous bases) in seq
+                            maxEE=c(2,2), # max error allowed after filtering
+                            truncQ=2, # truncate at first base with this score
+                            rm.phix=TRUE, # remove phix reads
+                            trimLeft = 10, # number of nt to trim from left
+                            compress=TRUE, # gzip files
+                            multithread=TRUE # OK for Mac, turn off on Windows
+                            )
+```
+
+No Let's check out the results 
+
+```{r}
+head(filter.out)
+
+colMeans(filter.out) #mean number of reads in and out of filtering
+mean(1-(filter.out[,2]/filter.out[,1])) #mean % filtered reads
+```
+
+We can also dive into these numbers a little deeper
+```{r}
+fivenum(1-(filter.out[,2]/filter.out[,1])) #five number report for % filtered
+hist(1-(filter.out[,2]/filter.out[,1]))  # hist #mean % filtered reads
+
+```
+
+Since some libraries look like there is a higher level of filtration than others lets take a closer look at which ones are not great. 
+```{r}
+tail(sort(
+  1-(filter.out[,2]/filter.out[,1])
+  ),  n =10
+)
+```
+
