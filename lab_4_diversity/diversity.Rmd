@@ -1,6 +1,8 @@
 ---
 title: "Lab 4 Diversity"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 ### Set up the environment
@@ -267,6 +269,7 @@ rich.plot <- ggplot(data = richness.rare, aes(x = group,
 
 rich.plot
 ```
+
 #### Plot shannon
 
 
