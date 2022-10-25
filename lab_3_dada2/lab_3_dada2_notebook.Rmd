@@ -158,7 +158,7 @@ filter.out <- filterAndTrim(fnFs, #paths to the input forward reads
                             )
 ```
 
-No Let's check out the results 
+Now Let's check out the results 
 
 ```{r}
 head(filter.out)
@@ -186,7 +186,7 @@ tail(sort(
 ### Sequence error analysis  
 
 The core Dada2 algorithm requires that we understand the error rates of the specific sequence reads our data set. 
-```{r,echo=FALSE,message=FALSE}
+```{r,message=FALSE}
 errF <- learnErrors(filtFs, multithread=TRUE)
 errR <- learnErrors(filtRs, multithread=TRUE)
 plotErrors(errF, nominalQ=TRUE)
@@ -205,7 +205,7 @@ dadaRs <- dada(filtRs, err=errR, multithread=TRUE)
 ### Merge and Filter reads 
 
 Next we will merge our forward and reverse reads into one contig. We will also filter PCR artifacts called chimeras (Bimeras) 
-```{r,echo=FALSE,message=FALSE}
+```{r,message=FALSE}
 mergers <- mergePairs(dadaFs, filtFs, dadaRs, filtRs, verbose=TRUE)
 
 #Make a table of samples x asvs 
