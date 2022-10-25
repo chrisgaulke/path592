@@ -1,0 +1,410 @@
+---
+title: "Lab 4 Diversity"
+output: html_notebook
+---
+
+### Set up the environment
+
+```{r, message=FALSE}
+library(dada2)
+library(ggplot2)
+library(vegan)
+library(reshape2)
+
+options(stringsAsFactors = F)
+```
+
+#### Functions
+
+```{r}
+###
+#        Function phylotype_analysis             #
+###
+
+phylotype_analysis <- function(obj, tax) {
+  #obj: microbiome object with at least 1 slot (data)
+  #tax: a tax object (named list taxa as names values in the list are seq ids)
+  obj.out <- NULL
+  for (h in 1:length(tax)) {
+    df <- NULL
+    #print(h)#debugging
+    for (i in 1:length(tax[[h]])) {
+      #print(i)#debugging
+      v1       <- obj$data[, unlist(tax[[h]][[i]])]
+      v2       <- names(tax[[h]])[i]
+      if (is.null(dim(v1))) {
+        df[[v2]] <- v1
+      } else{
+        df[[v2]] <- rowSums(v1)
+      }
+    }
+    obj.out[[names(tax)[h]]] <- as.data.frame(df)
+  }
+  return(obj.out)
+}
+
+make_taxa_df <- function(tax){
+
+  kingdom.df <- replicate(length(unique(tax[, 2])), c())
+  names(kingdom.df) <- unique(tax[, 2])
+  phylum.df  <- replicate(length(unique(tax[, 3])), c())
+  names(phylum.df) <- unique(tax[, 3])
+  class.df   <- replicate(length(unique(tax[, 4])), c())
+  names(class.df) <- unique(tax[, 4])
+  order.df   <- replicate(length(unique(tax[, 5])), c())
+  names(order.df) <- unique(tax[, 5])
+  family.df  <- replicate(length(unique(tax[, 6])), c())
+  names(family.df) <- unique(tax[, 6])
+  genus.df   <- replicate(length(unique(tax[, 7])), c())
+  names(genus.df) <- unique(tax[, 7])
+
+  for (i in 1:nrow(tax)) {
+    kingdom.df[[tax[i, 2]]] <-
+      c(kingdom.df[[tax[i, 2]]], tax[i, 1])
+    phylum.df[[tax[i, 3]]]  <-
+      c(phylum.df[[tax[i, 3]]], tax[i, 1])
+    class.df[[tax[i, 4]]]   <-
+      c(class.df[[tax[i, 4]]], tax[i, 1])
+    order.df[[tax[i, 5]]]   <-
+      c(order.df[[tax[i, 5]]], tax[i, 1])
+    family.df[[tax[i, 6]]]  <-
+      c(family.df[[tax[i, 6]]], tax[i, 1])
+    genus.df[[tax[i, 7]]]   <-
+      c(genus.df[[tax[i, 7]]], tax[i, 1])
+  }
+
+  tax.obj <- NULL
+  tax.obj$kingdom <- kingdom.df
+  tax.obj$phylum  <- phylum.df
+  tax.obj$class   <- class.df
+  tax.obj$order   <- order.df
+  tax.obj$family  <- family.df
+  tax.obj$genus   <- genus.df
+
+  return(tax.obj)
+}
+```
+
+***
+### Import data
+
+First we need to import the data that we generated before.
+
+```{r}
+#importing chimera filtered ASV table
+seqtab.nochim <- read.table("../out_files/seqtab_nochim.txt",
+                            sep = "\t",
+                            row.names = 1,
+                            header = T)
+
+#importing taxonomy table
+taxa <- read.table("../out_files/taxa.txt",
+                   sep = "\t", 
+                   row.names = 1,
+                   header = T
+                   )
+
+#make a mapping of ASV number to ASV sequence
+asv.dict <- data.frame(asv = paste("asv", seq(1,1817), sep = ""),
+                       seq = colnames(seqtab.nochim))
+
+#clean up asv nams
+rownames(taxa) <- asv.dict$asv
+colnames(seqtab.nochim) <- asv.dict$asv
+
+write.table(asv.dict,
+            file = "../out_files/asv_dict.txt",
+            quote = FALSE,
+            sep = "\t",
+            )
+
+#import metadata
+
+metadata <- read.table("../metadata/metadata_biogeography_modified.txt",
+                   sep = "\t", 
+                   header = T
+                   )
+
+all(rownames(metadata) %in% rownames(seqtab.nochim))
+
+all(rownames(metadata) == rownames(seqtab.nochim))
+
+```
+
+***
+
+### Normalize
+
+Next we will generate data normalized three ways. First rarefied, then relative abundance, then center log ratio transformed.
+
+```{r}
+raresamp <- min(rowSums(seqtab.nochim))
+
+#now we can plot the curves
+rarecurve(seqtab.nochim, step = 1000,
+          sample = 0,
+          label = F,
+          col = "black")
+
+abline(v = 1000, col = "red")
+abline(v = 2500, col = "yellow")
+abline(v = 5000, col = "black")
+
+
+set.seed(731)
+seqtab.nochim.rare <- rrarefy(seqtab.nochim, 2500) #rarefy
+seqtab.nochim.rclr <- decostand(seqtab.nochim, method = "rclr") #center log blah blah blah
+seqtab.nochim.rel <- decostand(seqtab.nochim, method = "total") #relative abundance
+
+```
+
+In practice we would choose one (perhaps two) methods of normalization. For illustration purpose only we can compare the number of asvs in each data set. 
+
+```{r}
+cor.test(specnumber(seqtab.nochim.rare), specnumber(seqtab.nochim.rel) )
+plot(specnumber(seqtab.nochim.rare), specnumber(seqtab.nochim.rel) )
+
+cor.test(specnumber(seqtab.nochim.rare), specnumber(seqtab.nochim.rclr) )
+plot(specnumber(seqtab.nochim.rare), specnumber(seqtab.nochim.rclr) )
+
+cor.test(specnumber(seqtab.nochim.rel), specnumber(seqtab.nochim.rclr) )
+plot(specnumber(seqtab.nochim.rel), specnumber(seqtab.nochim.rclr) )
+```
+
+Now, reviewer 3 suggested that we lost 80% of our data given our subsampling thresholds. But that always seemed a little off to me, so just to twist the knife, lets look at the actual data lost during rarefaction. First, we will calculate total number of ASVs we lose the number of the samples filtered ASVs occur in. 
+
+
+```{r echo=TRUE, message=TRUE}
+#total number of asvs
+length(colSums(seqtab.nochim.rare)[which(colSums(seqtab.nochim.rare)==0)])
+
+filt.names <- names(colSums(seqtab.nochim.rare)[which(colSums(seqtab.nochim.rare)==0)])
+
+#number of samples 
+
+hist(apply(seqtab.nochim[,filt.names], 2, function(x) sum(x > 0)))
+
+#How many occur in more than one sample
+sum(apply(seqtab.nochim[,filt.names], 2, function(x) sum(x > 0)) > 1 )
+
+```
+
+Above we found that the vast majority of ASVs that are filtered would be found in only one sample. Now we want to see the total abundance accross all samples (raw counts)
+```{r echo=TRUE, message=TRUE}
+#What is the total abundance across all samples 
+hist(colSums(seqtab.nochim[,filt.names]))
+```
+
+Most of these ASVs have pretty low abundance, but some have upwards of 50 raw counts. Let's see how much total abundance was actually lost?
+
+```{r echo=TRUE, message=TRUE}
+#total abundance lost
+sum(seqtab.nochim[,filt.names])
+
+#% total loss
+sum(seqtab.nochim[,filt.names])/sum(seqtab.nochim)
+
+```
+So here we lost less than 1% of all abundance in the data frame. It is true that we filtered ~87% of data here, but since it is randomly subsampled without replacement, the new profiles will reflect the abundance in the data sets filtered with other methods. All that said its sometimes just a little easier to go along with the zealots. 
+
+***
+
+### Alpha Diversity
+
+#### Calculate diversity
+
+Alpha diversity is one place where rarefaction is still pretty well accepted so for this analysis we will use our rarefied data. 
+
+```{r}
+
+#richness 
+richness.rare <- data.frame(specnumber(seqtab.nochim.rare))
+colnames(richness.rare) <- "richness"
+head(richness.rare)
+
+#shannon entropy
+shannon.rare <- data.frame(diversity(seqtab.nochim.rare, index = "shannon"))
+colnames(shannon.rare) <- "shannon"
+head(shannon.rare)
+
+```
+#### Plot richness
+
+This is pretty meaningless without context so lets add some information to our data frame so we can visualize better. But first we will check to make sure the data frames are in the same order
+
+```{r}
+all(rownames(shannon.rare) == rownames(metadata))
+all(rownames(richness.rare) == rownames(metadata))
+```
+
+Good. Now we can add some metadata and plot starting with richness
+
+```{r}
+richness.rare$group <- metadata$tissue
+
+boxplot(data = richness.rare, richness ~ group) #fine but ugly
+```
+
+I don't like how these plots are ordered. Since ggplot likes to order by level we can relevel the factors to change this. 
+
+```{r}
+levels(metadata$tissue) # looks like this is a character vector
+metadata$tissue <- factor(metadata$tissue,
+       levels = c("skin", "gill", "swim_bladder", "proximal_gut", "middle_gut", "distal_gut")
+       )
+
+```
+
+Now we can make a nicer plot with ggplot and the revised levels.
+
+```{r}
+
+richness.rare$group <- metadata$tissue #need to rerun this because we modified
+
+rich.plot <- ggplot(data = richness.rare, aes(x = group,
+                                                    y = richness)) + 
+  geom_boxplot(fill = "#528AAE") #fill by hex code #528AAE
+
+rich.plot
+```
+#### Plot shannon
+
+
+Now we can do the same thing with Shannon entropy. Note we don't have to relevel again because we only need to do this once if we modify the original metadata object. 
+
+```{r}
+shannon.rare$group <- metadata$tissue
+shannon.plot <- ggplot(data = shannon.rare, aes(x = group,
+                                                    y = shannon)) + 
+  geom_boxplot(fill = "#528AAE") #fill by hex code #528AAE
+
+shannon.plot
+```
+
+#### Some statistics
+
+It looks like the richness, and maybe entropy vary across groups. We can use simple stats to find out if this significant. 
+
+```{r}
+
+kruskal.test(richness.rare$richness ~ richness.rare$group) # marginally sig 
+kruskal.test(shannon.rare$shannon ~ shannon.rare$group) # no sig
+
+```
+
+We will talk more about stats later so for now we can move on... 
+
+***
+
+***
+
+### Beta Diversity
+
+Next we will look to see of diversity of our different tissues varies. Here we will use PCA to start. Keep in mind these are exploratory techniques so we can use as man of them as we like.  
+
+```{r}
+
+seq.rare.prcomp <- prcomp(seqtab.nochim.rel, scale =F, center = F) # defaults
+summary(seq.rare.prcomp)
+plot(seq.rare.prcomp)
+
+seqtab_rare_pca.df <- as.data.frame(seq.rare.prcomp$x[,1:5])
+
+#add metadata for plotting
+seqtab_rare_pca.df$group <- metadata$tissue
+
+seqtab_rare_pca.plot <- ggplot(data = seqtab_rare_pca.df,
+                                 aes(x = PC1,
+                                     y = PC2,
+                                     color = group
+                                     ) 
+                               ) 
+seqtab_rare_pca.plot +
+  geom_point(size = 3, alpha = .7)+
+  scale_color_brewer(palette = "Dark2")+
+  theme(
+    text = element_text(size = 16, colour = "black"),
+    panel.grid.major = element_line(colour = "grey99"),
+    panel.grid.minor = element_blank(),
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black"),
+    axis.text = element_text(colour = "black"),
+    aspect.ratio = 1,
+  )+
+  xlab("PC1 (67%)")+
+  ylab("PC2 (20%)")
+
+```
+
+We can try this with the log ratio too...
+
+```{r}
+
+seq.rare.prcomp <- prcomp(seqtab.nochim.rclr, scale =F, center = F) # defaults
+summary(seq.rare.prcomp)
+plot(seq.rare.prcomp)
+
+seqtab_rare_pca.df <- as.data.frame(seq.rare.prcomp$x[,1:5])
+
+#add metadata for plotting
+seqtab_rare_pca.df$group <- metadata$tissue
+
+seqtab_rare_pca.plot <- ggplot(data = seqtab_rare_pca.df,
+                                 aes(x = PC1,
+                                     y = PC2,
+                                     color = group
+                                     ) 
+                               ) 
+seqtab_rare_pca.plot +
+  geom_point(size = 3, alpha = .7)+
+  scale_color_brewer(palette = "Dark2")+
+  theme(
+    text = element_text(size = 16, colour = "black"),
+    panel.grid.major = element_line(colour = "grey99"),
+    panel.grid.minor = element_blank(),
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black"),
+    axis.text = element_text(colour = "black"),
+    aspect.ratio = 1,
+  )+
+  xlab("PC1 (35%)")+
+  ylab("PC2 (10%)")
+
+```
+
+Finally, lets see if the groups label correlates with microbiome diversity.  
+
+```{r}
+set.seed(731) # makes this reproducible
+
+seq_rel.adonis2 <- adonis2(seqtab.nochim.rel ~  tissue,
+                                permutations = 5000, 
+                                by = "terms",
+                                data = metadata,
+                                na.action = na.omit)
+
+
+seq_rclr.adonis2 <- adonis2(seqtab.nochim ~  tissue ,
+                                method ="robust.aitchison",
+                                permutations = 5000, 
+                                by = "terms",
+                                data = metadata,
+                                na.action = na.omit)
+
+
+seq_rel.adonis2
+seq_rclr.adonis2
+```
+
+One last thing that should be noted. Adonis2, despite the claims of the authors, is sensitive to data dispersion. To see if dispersion differs between groups we have to dig a little deeper. 
+
+```{r}
+disp.rclr <- betadisper(vegdist(seqtab.nochim, method = "robust.aitchison"), group = metadata$tissue)
+
+disp.rel <- betadisper(vegdist(seqtab.nochim, method = "bray"), group = metadata$tissue)
+
+
+anova(disp.rclr)
+anova(disp.rel)
+```
+
