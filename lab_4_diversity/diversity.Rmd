@@ -12,7 +12,6 @@ library(dada2)
 library(ggplot2)
 library(vegan)
 library(reshape2)
-
 options(stringsAsFactors = F)
 ```
 
@@ -291,11 +290,19 @@ It looks like the richness, and maybe entropy vary across groups. We can use sim
 ```{r}
 
 kruskal.test(richness.rare$richness ~ richness.rare$group) # marginally sig 
+
+pairwise.wilcox.test(x = richness.rare$richness,
+                     g = richness.rare$group,p.adjust.method = "holm"
+                      )
+
 kruskal.test(shannon.rare$shannon ~ shannon.rare$group) # no sig
 
-```
+pairwise.wilcox.test(x = shannon.rare$shannon,
+                     g = shannon.rare$group,p.adjust.method = "holm"
+                      ) #nobody uses bonferonni unless they are a sadist
 
-We will talk more about stats later so for now we can move on... 
+```
+For those unfamiliar with the holm method of family wise error rate control that doesn't suck. Specifically it applies a less conservative measure of control than bonferonni which effectively multiplies your p-value by the number of test. We will talk more about stats later so for now we can move on... 
 
 ***
 
@@ -339,26 +346,30 @@ seqtab_rare_pca.plot +
 
 ```
 
-We can try this with the log ratio too...
+We can try something similar with the log ratio transformed too, but it wont work with PCA like I originally thought.
 
 ```{r}
+#PCoA 
+seq.rclr.cmdscale <- cmdscale(vegdist(x = seqtab.nochim, method = "robust.aitchison"), k =5, eig = T)
 
-seq.rare.prcomp <- prcomp(seqtab.nochim.rclr, scale =F, center = F) # defaults
-summary(seq.rare.prcomp)
-plot(seq.rare.prcomp)
+#percent variation explained 
+round(seq.rclr.cmdscale$eig*100/sum(seq.rclr.cmdscale$eig),1)
 
-seqtab_rare_pca.df <- as.data.frame(seq.rare.prcomp$x[,1:5])
+#grab the dims
+seq.rclr.cmdscale.df <- as.data.frame(seq.rclr.cmdscale$points)
 
 #add metadata for plotting
-seqtab_rare_pca.df$group <- metadata$tissue
+seq.rclr.cmdscale.df$group <- metadata$tissue
+colnames(seq.rclr.cmdscale.df) <- c("Dim1","Dim2", "Dim3", "Dim4", "Dim5", "group")
 
-seqtab_rare_pca.plot <- ggplot(data = seqtab_rare_pca.df,
-                                 aes(x = PC1,
-                                     y = PC2,
+
+seq.rclr.cmdscale.plot <- ggplot(data = seq.rclr.cmdscale.df,
+                                 aes(x = Dim1,
+                                     y = Dim2,
                                      color = group
                                      ) 
                                ) 
-seqtab_rare_pca.plot +
+seq.rclr.cmdscale.plot +
   geom_point(size = 3, alpha = .7)+
   scale_color_brewer(palette = "Dark2")+
   theme(
@@ -370,8 +381,8 @@ seqtab_rare_pca.plot +
     axis.text = element_text(colour = "black"),
     aspect.ratio = 1,
   )+
-  xlab("PC1 (35%)")+
-  ylab("PC2 (10%)")
+  xlab("PC1 (14.1%)")+
+  ylab("PC2 (9.2%)")
 
 ```
 
@@ -410,4 +421,96 @@ disp.rel <- betadisper(vegdist(seqtab.nochim, method = "bray"), group = metadata
 anova(disp.rclr)
 anova(disp.rel)
 ```
+*** 
+
+#### Taxon abundance differences 
+```{r}
+
+kruskal.test(seqtab.nochim.rare[,1] ~ metadata$tissue)
+
+#negative binomial generalized linear model 
+library(MASS)
+asv1.fit0 <- glm.nb(seqtab.nochim.rare[,1] ~ tissue , data = metadata)
+summary(asv1.fit0)
+
+#negative binomial glm with mixed effects   
+library(glmmTMB)
+asv1.fit1 <- glmmTMB(seqtab.nochim.rare[,1] ~ tissue + (1|sample),family = nbinom1(), data = metadata)
+
+summary(asv1.fit1)
+
+#but is the model significant? 
+
+#reduced model
+asv1.fit2 <- glmmTMB(seqtab.nochim.rare[,1] ~  (1|sample),family = nbinom1(), data = metadata)
+
+anova( asv1.fit2, asv1.fit1)
+
+```
+
+This works well if we only have one or two taxa that we want to test but in practice we usually have many more. To test this we need a looping mechanism
+
+```{r,error= T}
+
+
+#first clean the rarefied data
+seqtab.nochim.rare.clean <- seqtab.nochim.rare[,which(colSums(seqtab.nochim.rare) > 0)]
+
+#run kruskal for all
+
+asv.kruskal <- apply(seqtab.nochim.rare.clean, 2, function(x){kruskal.test(x ~ metadata$tissue)})
+
+#look at the structure of the object
+head(names(asv.kruskal))
+
+attributes(asv.kruskal$asv1)
+
+#extract the relevant bits
+k.stat <- unlist(lapply(asv.kruskal,FUN =  function(x){ x$statistic}))
+k.pvalue <- unlist(lapply(asv.kruskal,FUN =  function(x){ x$p.value}))
+
+asv.kruskal.df <- 
+  data.frame(asv = names(asv.kruskal),
+             statistic = k.stat,
+             pval = k.pvalue
+)
+
+library(qvalue)
+qvalue(asv.kruskal.df$pval)$qvalue
+#qvalue sometimes fails if it can't play nice with the distribution 
+
+hist(asv.kruskal.df$pval) #yah this is probably the problem
+
+#when this happens we can use fdr ( Benjamini & Hochberg )instead. Just be sure to use the same method of fdr throughout your project (i.e., don't use fdr and then qvalue)
+
+asv.kruskal.df$fdr <- p.adjust(asv.kruskal.df$pval,method = "fdr")
+rownames(asv.kruskal.df) <- asv.kruskal.df$asv
+hist(asv.kruskal.df$fdr)
+sum(asv.kruskal.df$fdr < 0.1)
+
+```
+
+Now lets look at some of these hits to make sure they look resonable 
+
+```{r}
+
+sig_asv.df <- asv.kruskal.df[asv.kruskal.df$fdr < 0.1,]
+head(sig_asv.df)
+
+boxplot(seqtab.nochim.rare.clean[,"asv7"] ~ metadata$tissue)
+boxplot(seqtab.nochim.rare.clean[,"asv11"] ~ metadata$tissue)
+boxplot(seqtab.nochim.rare.clean[,"asv12"] ~ metadata$tissue)
+
+#what taxa do we think these are
+taxa["asv7","Genus"]
+taxa["asv11","Genus"]
+taxa["asv12","Family"]
+
+```
+
+Note that the same approach can be implemented for more complex tests, you just have to be clear on what you are testing. It is also important to understand that non-parametric tests tend to have less statistical power. 
+
+
+
+
 
